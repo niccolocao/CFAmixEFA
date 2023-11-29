@@ -1,6 +1,6 @@
 # CFAmixEFA
 
-Julia code adn R-scripts related to the draft at https://doi.org/10.48550/arXiv.2311.15988
+Julia code adn R-scripts related to the draft paper https://doi.org/10.48550/arXiv.2311.15988
 
 
 ## Quick description
