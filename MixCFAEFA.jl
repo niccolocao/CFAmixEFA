@@ -189,7 +189,10 @@ function QuasiNewton(betas_gradient, betas::Vector, X::Matrix{Float64}, Ez1::Vec
         betas = betas - hess\grad
         iter += 1
         end
-    end
+        if iter >= maxIter
+            betas = vec(fill(NaN,ncov))
+        end
+    end    
     return betas
 end
 
