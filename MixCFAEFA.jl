@@ -420,6 +420,16 @@ function Psi_delta_mstep(n::Int64,Lambda_2::Matrix{Float64},ESyy0::Matrix{Float6
     return Psi_delta
 end
 
+# function Psi_delta_mstep(Y::Matrix{Float64},b2::Matrix{Float64},B2::Matrix{Float64},nu::Vector{Float64},n::Int64,p::Int64,K::Int64,Lambda_2::Matrix{Float64},ESyy0::Matrix{Float64},Exiy0::Matrix{Float64},Ez0::Vector{Float64})
+#     local Psi_delta::Diagonal{Float64, Vector{Float64}}, sigma::Float64
+#     sigma = 0.0
+#     for i in 1:n
+#         sigma = sigma + (Ez0[i].*norm((Y[:,i]))^2-2*(b2*(Ez0[i].*(Y[:,i].-Lambda_2*nu)))'*Lambda_2'*(Y[:,i]) +tr((B2*((Ez0[i])) + (b2*(((Y[:,i].-Lambda_2*nu).*Ez0[i]')*(Y[:,i].-Lambda_2*nu)'))*b2' + nu*nu'*((Ez0[i])) + nu*((Ez0[i].*(Y[:,i].-Lambda_2*nu)'))*b2'+b2*(((Ez0[i].*(Y[:,i].-Lambda_2*nu)')))'*nu')*Lambda_2'*Lambda_2))/(n*p)
+#     end
+#     Psi_delta = Diagonal(fill(sigma,p))
+#     return Psi_delta
+# end
+
 
 function Phi_mstep(ESetaeta::Matrix{Float64},Eeta::Matrix{Float64},Ek1::Float64,mu::Vector{Float64},n::Int64)
     local Phi::Matrix{Float64}
