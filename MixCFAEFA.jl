@@ -78,10 +78,10 @@ function EM(Y::Matrix{Float64},X::Matrix{Float64},q::Int64, K::Int64, p::Int64, 
             end
 
             #E-step
-            b1 = b1_fun(q,Lambda_1,Phi,Theta_delta)
-            B1 = B1_fun(Lambda_1,Phi,Theta_delta,b1)
-            b2 = b2_fun(K,Lambda_2,Psi_delta)
-            B2 = Matrix{Float64}(I,K,K)-b2*Lambda_2
+            b1 = b1_fun(q,Lambda_1,Phi,Theta_delta,mu)
+            B1 = B1_fun(Lambda_1,Phi,Theta_delta,b1,mu)
+            b2 = b2_fun(K,Lambda_2,Psi_delta,nu)
+            B2 = B2_fun(K,Lambda_2,Psi_delta,nu)
             
             Ez1 = Expectz(n,p,Y,kappa,inv_lemma_1,inv_lemma_2, det_lemma_1,det_lemma_2,Lambda_1,Lambda_2,mu,nu)
 
