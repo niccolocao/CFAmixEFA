@@ -263,27 +263,29 @@ end
 
 function b1_fun(q::Int64,Lambda_1::Matrix{Float64},Phi::Matrix{Float64},Theta_delta::Diagonal{Float64, Vector{Float64}})
     local b1::Matrix{Float64}
-    b1 = Phi*Lambda_1'*inv(Theta_delta)-Phi*Lambda_1'*(Theta_delta\Lambda_1)*((Matrix{Float64}(I,q,q)+Phi*Lambda_1'*(Theta_delta\Lambda_1))\Phi)*Lambda_1'*inv(Theta_delta)
+    b1 = (Phi*Lambda_1'-mu*mu'*Lambda_1')*inv(Lambda_1*Phi*Lambda_1'+Theta_delta-Lambda_1*mu*mu'*Lambda_1')
     return b1
 end
 
 function B1_fun(Lambda_1::Matrix{Float64},Phi::Matrix{Float64},Theta_delta::Diagonal{Float64, Vector{Float64}}, b1::Matrix{Float64})
     local B1::Matrix{Float64}
-    B1 = Phi-b1*Lambda_1*Phi
+    B1 = Phi-mu*mu'-b1*(Lambda_1*Phi-Lambda_1*mu*mu')
     return B1
 end
 
 function b2_fun(K::Int64,Lambda_2::Matrix{Float64},Psi_delta::Diagonal{Float64, Vector{Float64}})
     local b2::Matrix{Float64}
-    b2 =  Lambda_2'*inv(Psi_delta)-Lambda_2'*(Psi_delta\Lambda_2)*((Matrix{Float64}(I,K,K)+Lambda_2'*(Psi_delta\Lambda_2))\Lambda_2')*inv(Psi_delta)
+    b2 = (Lambda_2'-nu*nu'*Lambda_2')*inv(Lambda_2*Lambda_2'+Psi_delta-Lambda_2*nu*nu'*Lambda_2')
     return b2
 end
 
 function B2_fun(K::Int64,Lambda_2::Matrix{Float64},Psi_delta::Diagonal{Float64, Vector{Float64}}, b2::Matrix{Float64})
     local B2::Matrix{Float64}
-    B2 = Matrix{Float64}(I,K,K)-b2*Lambda_2
+    B2 = Matrix{Float64}(I,K,K)-nu*nu'-b2*(Lambda_2*-Lambda_2*nu*nu')
     return B2
 end
+
+
 
 
 function Expectz(n::Int64, p::Int64, Y::Matrix{Float64},kappa::Vector{Float64},inv_lemma_1::Matrix{Float64},inv_lemma_2::Matrix{Float64}, det_lemma_1::Float64,det_lemma_2::Float64, Lambda_1::Matrix{Float64}, Lambda_2::Matrix{Float64}, mu::Vector{Float64}, nu::Vector{Float64})
