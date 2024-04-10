@@ -24,7 +24,7 @@ model = paste(
 
 cfa_mix = cfa(model = model,data = dat,estimator="ML")
 
-fitmeasures(object = fit_mix,fit.measures = c("AIC","RMSEA","CFI","NFI","chisq","df","npar"))
+fitmeasures(object = cfa_mix,fit.measures = c("AIC","RMSEA","CFI","NFI","chisq","df","npar"))
 
 
 
