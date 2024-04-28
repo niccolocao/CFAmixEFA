@@ -536,11 +536,11 @@ end
 
 
 
-function boots_CFAmEFA_faking(Y,X,n,p,q,K,B,std_predictors,L_str,mu,str=missing)
-    std_preds = vcat(1,std_predictors)
+function boots_CFAmEFA_faking(Y,X,n,p,q,restarts,K,B,std_predictors,L_str,mu,str=missing)
+    std_preds = vcat(1,std_predictors); numnan = 0
     ncov = size(X,2); Lambda_1_boots = Array{Float64}(undef,p,B); Theta_delta_boots = Array{Float64}(undef,p,B); Phi_boots = Array{Float64}(undef,q*q,B); Lambda_2_boots = Array{Float64}(undef,p*K,B); Psi_delta_boots = Array{Float64}(undef,p,B); beta_boots = Array{Float64}(undef,ncov,B); mu_boots = Array{Float64}(undef,q,B); nu_boots = Array{Float64}(undef,K,B); Ez1_boots = Array{Float64}(undef,n,B);
     for b in 1:B
-        println(b)
+        println(string("boot: ",b))
         boots0 = sample(1:220,220,replace=true)
         boots1 = sample(221:735,515,replace=true)
 
@@ -548,7 +548,7 @@ function boots_CFAmEFA_faking(Y,X,n,p,q,K,B,std_predictors,L_str,mu,str=missing)
         X = X[vcat(boots0,boots1),:]
         
         
-        res =  CFAmixEFA(Y, q, K, 500, X, 2000, mu, L_str)
+        res =  CFAmixEFA(Y, q, K, restarts, X, 2000, mu, L_str)
       
 
         Lambda_1_boots[:,b] = sum(reshape(res[1:(p*q)],p,q),dims=2)
@@ -565,10 +565,18 @@ function boots_CFAmEFA_faking(Y,X,n,p,q,K,B,std_predictors,L_str,mu,str=missing)
         if str !== missing
             jldsave(string(str,"/boots_",b,".jld2"),res=boo)
         end
+        numnan = numnan + Int(isnan(boo[1,1]))
     end
 
     
+    
+    
     Theta_boots = vcat(Lambda_1_boots, Theta_delta_boots, Phi_boots, Lambda_2_boots, Psi_delta_boots, beta_boots, mu_boots, nu_boots)
+    Theta_boots = Theta_boots[:,isnan.(Theta_boots[1,:])]
+    if size(Theta_boots,2) == 0
+        println("All NaN, possibly increase the number of restarts")
+        return Theta_boots
+    end
     n_theta = size(Theta_boots,1)
     Theta_boots_mean = sum(Theta_boots,dims=2)/B
     cov = zeros(n_theta,n_theta)
@@ -578,8 +586,9 @@ function boots_CFAmEFA_faking(Y,X,n,p,q,K,B,std_predictors,L_str,mu,str=missing)
 
     se = sqrt.(diag(cov))
 
-    return se
+    return vcat(se,numnan)
 end
+
 
 
 end
