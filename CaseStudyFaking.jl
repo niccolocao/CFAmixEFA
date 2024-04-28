@@ -76,7 +76,7 @@ std_pred = std(X[:,2]); #standard deviation of age
 X[:,2] = (X[:,2].-mean(X[:,2]))./std(X[:,2]);
 
 Y = Matrix{Float64}(mat);
-#some minimal variation and standardization
+#some negligible variation and standardization
 Random.seed!(2739797);
 for i in 1:size(Y,1)
     Y[i,:] = Y[i,:] + rand(Uniform(-0.02,0.02),size(Y,2))
@@ -112,7 +112,7 @@ classperf(z,Ez)
 
 
 #bootstrap standard errors note that the evaluation would take (very) long time
-bse = boots_CFAmEFA_faking(Y,X,n,p,q,K,1500,std_pred,L_str,0)  #std_pred is the vector of standard deviation of the covariates, 0 indicates that the CFA means are setted to zero
+bse = boots_CFAmEFA_faking(Y,X,n,p,q,1000,K,10,std_pred,L_str,0)  #std_pred is the vector of standard deviation of the covariates, 0 indicates that the CFA means are setted to zero
 
 
 
