@@ -3,17 +3,19 @@
 ##############################################################################
 
 push!(LOAD_PATH,string(pwd(),"/MixCFAEFA/"))
-using MixCFAEFA, CSV, StatsBase, DataFrames, DelimitedFiles, Distributions, Random, JLD2, Clustering, LinearAlgebra, Base.Threads, StatFiles
+using MixCFAEFA, CSV, StatsBase, DataFrames, DelimitedFiles, Distributions, Random, JLD2, Clustering, LinearAlgebra, Base.Threads, StatFiles, RCall
 
 
 #downloaded dataset from https://osf.io/e3scf
-data = DataFrame(load("~/DATA_SAMPLE_1.sav"))[:,2:39];
+data = DataFrame(load("~/DATA_SAMPLE_1.sav"));
 data = dropmissing(data, disallowmissing=true);
-n = size(data,1);
+data = data[:,2:39]
+n = size(data,1); 
 
 
 #model matrix for logistic regression with standardized predictors: intercept in column 1, gender in column 2, age in column 3
 X = hcat(ones(size(data,1)),Matrix{Float64}(data[:,1:2]))
+X[:,2] = X[:,2].-1
 std_pred1 = std(X[:,3]); 
 X[:,3] = (X[:,3].-mean(X[:,3]))./std(X[:,3]);
 
@@ -21,7 +23,7 @@ X[:,3] = (X[:,3].-mean(X[:,3]))./std(X[:,3]);
 Y = Matrix{Float64}(data[:,3:end]);
 
 Random.seed!(2739797);
-#some minimal variation
+#some negligible variation
 for i in 1:size(Y,1)
     Y[i,:] = Y[i,:] + rand(Uniform(-0.02,0.02),size(Y,2))
 end
@@ -35,6 +37,7 @@ Y = Matrix(Y');
 
 q = 3; #number of CFA factors
 K = 17; #number of EFA factors
+p = size(Y,1);
 
 #definition of the CFA latent structure
 L_str = hcat(cat(repeat([1],12),repeat([0],12), repeat([0],12),dims=1),
@@ -44,12 +47,14 @@ L_str = hcat(cat(repeat([1],12),repeat([0],12), repeat([0],12),dims=1),
 #CFA+EFA estimation
 res = CFAmixEFA(Y, q, K, 500, X, 2000, 1, L_str)
 
-#bootstrap standard errors, note that the evaluation would take long time
-bse = boots_CFAmEFA_careless(Y,X,n,p,q,K,1500,std_pred,L_str1,1)  #std_pred is the vector of standard deviation of the covariates, 1 indicates the estimation of CFA means
-
 #extract the predicted latent values and save them 
 Ez = round.(Int64,res[((p*q)+(p*K)+p+p+q^2+n+1+1):((p*q)+(p*K)+p+p+q^2+n+1+n)])
-writedlm(string(pwd(),"/Ez.csv"),Ez)
+# writedlm(string(pwd(),"/Ez.csv"),Ez)
+
+
+#bootstrap standard errors, note that the evaluation would take long time
+bse = boots_CFAmEFA_careless(Y,X,n,p,q,K,3,std_pred1,L_str,1)  #std_pred is the vector of standard deviation of the covariates, 1 indicates the estimation of CFA means
+
 
 
 
@@ -139,5 +144,45 @@ for j in ["null" "gender" "age" "complete"]
 end
 res_selection = vcat(["LLIK" "AIC" "CAIC" "BIC" "ssBIC" " CLC" "ICLBIC" "Entropy"],vcat(measures[:,:,1],measures[:,:,2],measures[:,:,3],measures[:,:,4]))
     
+
+
+
+# CFA on the observed data
+dat = data[:,3:38]
+rename!(dat,vcat(map(string,fill("E",12),1:12),map(string,fill("C",12),1:12),map(string,fill("S",12),1:12)))
+
+
+R"""
+library(lavaan)
+model = paste(
+  paste("E",paste(paste0("E",1:12),collapse = "+"),sep = " =~ "),
+  paste("C",paste(paste0("C",1:12),collapse = "+"),sep = " =~ "),
+  paste("S",paste(paste0("S",1:12),collapse = "+"),sep = " =~ "),
+  sep = " \n ")
+
+  cfa_mix = cfa(model = model,data = $dat,estimator="ML")
+
+  fitmeasures(object = cfa_mix,fit.measures = c("AIC","RMSEA","CFI","NFI","chisq","df","npar"))
+"""
+
+
+
+R"""
+# labels
+itt = c("1",rep("   ",4),"6",rep("   ",5),"12",rep("   ",5),"18",rep("   ",5),"24",rep("   ",5),"28",rep("   ",5),"36")
+
+library(RColorBrewer)
+library(haven)
+# heatmap CFA component (unbiased subjects)
+cor_mat_cfa = cor($dat[$Ez==1,])
+pheatmap::pheatmap(cor_mat_cfa,cluster_rows = F,cluster_cols = F,fontsize = 20,colorRampPalette(rev(brewer.pal(n=11, name="RdBu")))(100),breaks=seq(-1, 1, length.out=101),cellwidth = 12,cellheight = 12,width = 4,height = 4,show_rownames = T, 
+                   labels_row =itt,labels_col = itt,legend = F)
+"""
+R"""
+# heatmap EFA component (biased subjects)
+cor_mat_efa = cor($data[$Ez==0,])
+pheatmap::pheatmap(cor_mat_efa,cluster_rows = F,cluster_cols = F,fontsize = 20,colorRampPalette(rev(brewer.pal(n=11, name="RdBu")))(100),breaks=seq(-1, 1, length.out=101),cellwidth = 12,cellheight = 12,width = 4,height = 4,show_rownames = T, 
+                   labels_row =itt,labels_col = itt)
+"""
 
 
