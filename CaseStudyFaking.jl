@@ -112,7 +112,7 @@ classperf(z,Ez)
 
 
 #bootstrap standard errors note that the evaluation would take (very) long time
-bse = boots_CFAmEFA_faking(Y,X,n,p,q,K,10,std_pred,L_str,0)  #std_pred is the vector of standard deviation of the covariates, 0 indicates that the CFA means are setted to zero
+bse = boots_CFAmEFA_faking(Y,X,n,p,q,K,1500,std_pred,L_str,0)  #std_pred is the vector of standard deviation of the covariates, 0 indicates that the CFA means are setted to zero
 
 
 
