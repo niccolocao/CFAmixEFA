@@ -1,7 +1,7 @@
 module MixCFAEFA
 
 
-using Distributions, LinearAlgebra, ForwardDiff
+using Distributions, LinearAlgebra
 
 export CFAmixEFA, boots_CFAmEFA_careless, boots_CFAmEFA_faking, classperf, inv_lemma_1_fun, inv_lemma_2_fun, det_lemma_1_fun, det_lemma_2_fun
 
@@ -139,7 +139,7 @@ function EM(Y::Matrix{Float64},X::Matrix{Float64},q::Int64, K::Int64, p::Int64, 
                 kappa = repeat([kappa_1],n)
                 betas = log(kappa[1]/(1 - kappa[1]))
             else
-                betas = QuasiNewton(betas_gradient, betas, X, Ez1, Ez0, ncov)
+                betas = NewtonRaphson(betas_gradient, betas, X, Ez1, Ez0, ncov)
                 kappa = exp.(X*betas)./(exp.(X*betas).+1)
             end         
            
@@ -175,18 +175,19 @@ end
 
 #Beta gradient
 function betas_gradient(betas::Vector,X::Matrix{Float64},Ez1::Vector{Float64},Ez0::Vector{Float64})
-    fval =  (.- sum(Ez1.*X./(exp.(X*betas).+1), dims=1) .+ sum(Ez0.*X.*exp.(X*betas)./(exp.(X*betas).+1),dims=1))
+    fval = - ( sum((-Ez1.+Ez0.*exp.(X*betas)).*X./(exp.(X*betas).+1), dims=1)) #(.- sum(Ez1.*X./(exp.(X*betas).+1), dims=1) .+ sum(Ez0.*X.*exp.(X*betas)./(exp.(X*betas).+1),dims=1))
     return vec(fval)
 end
 
 
-#Quasi-Newton method
-function QuasiNewton(betas_gradient, betas::Vector, X::Matrix{Float64}, Ez1::Vector{Float64}, Ez0::Vector{Float64}, ncov::Int64)
+
+#Newton-Raphson
+function NewtonRaphson(betas_gradient, betas::Vector, X::Matrix{Float64}, Ez1::Vector{Float64}, Ez0::Vector{Float64}, ncov::Int64)
     local betas_old::Vector{Float64}, iter::Int64, tol::Float64, maxIter::Int64, grad::Vector{Float64}, hess::Matrix{Float64}
     betas_old = repeat([-Inf],size(X,2)); iter = 0;  tol=1e-8; maxIter = 1000
     while sum(abs.(betas.-betas_old)) > tol && iter < maxIter
         grad = betas_gradient(betas,X,Ez1,Ez0)
-        hess = ForwardDiff.jacobian(betas->betas_gradient(betas,X,Ez1,Ez0),betas)
+        hess = -(X.*exp.(X*betas)./(exp.(X*betas).+1).^2)'*X
         # println(hess)
         if det(hess) == 0.0 || isnan(sum(hess)) || isinf(sum(hess))
             return vec(fill(NaN,ncov))
