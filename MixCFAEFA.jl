@@ -175,7 +175,7 @@ end
 
 #Beta gradient
 function betas_gradient(betas::Vector,X::Matrix{Float64},Ez1::Vector{Float64},Ez0::Vector{Float64})
-    fval = - ( sum((-Ez1.+Ez0.*exp.(X*betas)).*X./(exp.(X*betas).+1), dims=1)) #(.- sum(Ez1.*X./(exp.(X*betas).+1), dims=1) .+ sum(Ez0.*X.*exp.(X*betas)./(exp.(X*betas).+1),dims=1))
+    fval = - X'*((-Ez1.+Ez0.*exp.(X*betas))./(exp.(X*betas).+1))
     return vec(fval)
 end
 
