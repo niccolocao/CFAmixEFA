@@ -174,13 +174,13 @@ itt = c("1",rep("   ",4),"6",rep("   ",5),"12",rep("   ",5),"18",rep("   ",5),"2
 library(RColorBrewer)
 library(haven)
 # heatmap CFA component (unbiased subjects)
-cor_mat_cfa = cor($dat[$Ez==1,])
+cor_mat_cfa = cor(t($Y)[$Ez==1,])
 pheatmap::pheatmap(cor_mat_cfa,cluster_rows = F,cluster_cols = F,fontsize = 20,colorRampPalette(rev(brewer.pal(n=11, name="RdBu")))(100),breaks=seq(-1, 1, length.out=101),cellwidth = 12,cellheight = 12,width = 4,height = 4,show_rownames = T, 
                    labels_row =itt,labels_col = itt,legend = F)
 """
 R"""
 # heatmap EFA component (biased subjects)
-cor_mat_efa = cor($data[$Ez==0,])
+cor_mat_efa = cor(t($Y)[$Ez==0,])
 pheatmap::pheatmap(cor_mat_efa,cluster_rows = F,cluster_cols = F,fontsize = 20,colorRampPalette(rev(brewer.pal(n=11, name="RdBu")))(100),breaks=seq(-1, 1, length.out=101),cellwidth = 12,cellheight = 12,width = 4,height = 4,show_rownames = T, 
                    labels_row =itt,labels_col = itt)
 """
