@@ -74,7 +74,7 @@ function EM(Y::Matrix{Float64},X::Matrix{Float64},q::Int64, K::Int64, p::Int64, 
 
             if det_lemma_1<=0 || det_lemma_2<=0
                 code_error = 0.0
-                return vcat(vec(fill(NaN,p,q)), vec(fill(NaN,p,K)), vec(diag(fill(NaN,p,p))), vec(diag(fill(NaN,p,p))), vec(fill(NaN,q,q)), vec(fill(NaN,n)), NaN, vec(fill(NaN,n)), vec(fill(NaN,ncov)), vec(fill(NaN,q)), vec(fill(NaN,K)), code_error, sum_diff_tf, t-1) 
+                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K+K*n), code_error, sum_diff_tf, t-1) 
             end
             println(t)
             #E-step
@@ -112,7 +112,7 @@ function EM(Y::Matrix{Float64},X::Matrix{Float64},q::Int64, K::Int64, p::Int64, 
             ESxixi = ESxixi0(n,p,Y,Ez0,Lambda_2,nu,b2,B2)
             if isequal(sum(ESetaeta),NaN) || isequal(sum(Eetay1),NaN) || isnan(ESxixi[1,1]) || isequal(sum(ESxixi),0)
                 code_error = 0.0
-                return vcat(vec(fill(NaN,p,q)), vec(fill(NaN,p,K)), vec(diag(fill(NaN,p,p))), vec(diag(fill(NaN,p,p))), vec(fill(NaN,q,q)), vec(fill(NaN,n)), NaN, vec(fill(NaN,n)), vec(fill(NaN,ncov)), vec(fill(NaN,q)), vec(fill(NaN,K)), code_error, sum_diff_tf, t-1) 
+                return vvcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K+K*n), code_error, sum_diff_tf, t-1) 
             else
         
                 
@@ -136,8 +136,8 @@ function EM(Y::Matrix{Float64},X::Matrix{Float64},q::Int64, K::Int64, p::Int64, 
             #If no covariates are provided
             if ncov == 1
                 kappa_1 = Ek1/n
-                kappa = repeat([kappa_1],n)
-                betas = log(kappa[1]/(1 - kappa[1]))
+                kappa = fill(kappa_1,n)
+                betas = log(kappa_1/(1 - kappa_1))
             else
                 betas = NewtonRaphson(betas_gradient, betas, X, Ez1, Ez0, ncov)
                 kappa = exp.(X*betas)./(exp.(X*betas).+1)
@@ -146,13 +146,13 @@ function EM(Y::Matrix{Float64},X::Matrix{Float64},q::Int64, K::Int64, p::Int64, 
             #Controls for non-convergence
             if sum(Theta_delta.<0) > 0 || det(Psi_delta) < 0 || isequal(sum(Theta_delta),NaN) || isequal(sum(Ez0),NaN)
                 code_error = 0.0
-                return vcat(vec(fill(NaN,p,q)), vec(fill(NaN,p,K)), vec(diag(fill(NaN,p,p))), vec(diag(fill(NaN,p,p))), vec(fill(NaN,q,q)), vec(fill(NaN,n)), NaN, vec(fill(NaN,n)), vec(fill(NaN,ncov)), vec(fill(NaN,q)), vec(fill(NaN,K)), code_error, sum_diff_tf, t-1) 
+                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K+K*n), code_error, sum_diff_tf, t-1) 
             elseif isnan(betas[1]) 
                 code_error = 1.0
-                return vcat(vec(fill(NaN,p,q)), vec(fill(NaN,p,K)), vec(diag(fill(NaN,p,p))), vec(diag(fill(NaN,p,p))), vec(fill(NaN,q,q)), vec(fill(NaN,n)), NaN, vec(fill(NaN,n)), vec(fill(NaN,ncov)), vec(fill(NaN,q)), vec(fill(NaN,K)), code_error, sum_diff_tf, t-1) 
+                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K+K*n), code_error, sum_diff_tf, t-1) 
             elseif det(Phi)<0 
                 code_error = 2.0
-                return vcat(vec(fill(NaN,p,q)), vec(fill(NaN,p,K)), vec(diag(fill(NaN,p,p))), vec(diag(fill(NaN,p,p))), vec(fill(NaN,q,q)), vec(fill(NaN,n)), NaN, vec(fill(NaN,n)), vec(fill(NaN,ncov)), vec(fill(NaN,q)), vec(fill(NaN,K)), code_error, sum_diff_tf, t-1) 
+                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K+K*n), code_error, sum_diff_tf, t-1) 
             else
                 old_diff = diff_llik
                 llik[t] = llik_compute(Y,n,p,q,K,Lambda_1, Lambda_2, Theta_delta, Psi_delta, Phi, kappa, Ez1, Ez0,Ek0,Ek1,mu,nu,Eeta,Exi,Eetay1,Exiy0,ESyy1,ESyy0,ESetaeta,ESxixi)
@@ -160,7 +160,7 @@ function EM(Y::Matrix{Float64},X::Matrix{Float64},q::Int64, K::Int64, p::Int64, 
                 diff_llik = abs(oldllik - llik[t])
                 if !(oldllik<llik[t])
                     code_error = 3.0
-                    return vcat(vec(fill(NaN,p,q)), vec(fill(NaN,p,K)), vec(diag(fill(NaN,p,p))), vec(diag(fill(NaN,p,p))), vec(fill(NaN,q,q)), vec(fill(NaN,n)), NaN, vec(fill(NaN,n)), vec(fill(NaN,ncov)), vec(fill(NaN,q)), vec(fill(NaN,K)), code_error, sum_diff_tf, t-1) 
+                    return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K+K*n), code_error, sum_diff_tf, t-1) 
                 end
 
                 sum_diff[t] = diff_llik>old_diff               
