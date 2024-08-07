@@ -1,10 +1,10 @@
 # CFAmixEFA
 
-Julia code and R-scripts related to the draft paper https://doi.org/10.48550/arXiv.2311.15988
+Julia code and R-scripts related to the published article https://dx.doi.org/10.1093/jrsssc/qlae036
 
 
 ## Quick description
 - MixCFAEFA.jl: Julia module with CFA+EFA model functions
 - CaseStudyFaking.jl: application on data affected by faking behavior
 - CaseStudyCareless.jl: application on data affected by careless responding
-
+- supplOnlinePub.pdf: supplementary material related to the article 
