@@ -144,19 +144,24 @@ function EM(Y::Matrix{Float64},X::Matrix{Float64},q::Int64, K::Int64, p::Int64, 
             end         
            
             #Controls for non-convergence
-            if sum(Theta_delta.<0) > 0 || det(Psi_delta) < 0 || isequal(sum(Theta_delta),NaN) || isequal(sum(Ez0),NaN)
+            inv_lemma_1 = inv_lemma_1_fun(q,Lambda_1,Theta_delta,Phi)
+            inv_lemma_2 = inv_lemma_2_fun(K,Lambda_2,Psi_delta)      
+            det_lemma_1 = det_lemma_1_fun(Lambda_1,Theta_delta,Phi)
+            det_lemma_2 = det_lemma_2_fun(K,Lambda_2,Psi_delta)
+            #Controls for non-convergence
+            if sum(Theta_delta.<0) > 0 || det(Psi_delta) < 0 || isequal(sum(Theta_delta),NaN) || isequal(sum(Ez0),NaN) || sum(diag(inv_lemma_1).<0) > 0 || sum(diag(inv_lemma_2).<0) > 0 || det_lemma_1 < 0 || det_lemma_2<0 
                 code_error = 0.0
-                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K), code_error, sum_diff_tf, t-1) 
+                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K+K*n+q*n), code_error, sum_diff_tf, t-1) 
             elseif isnan(betas[1]) 
                 code_error = 1.0
-                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K), code_error, sum_diff_tf, t-1) 
+                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K+K*n+q*n), code_error, sum_diff_tf, t-1) 
             elseif det(Phi)<0 
                 code_error = 2.0
-                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K), code_error, sum_diff_tf, t-1) 
+                return vcat(fill(NaN,p*q+p*K+p+p+q^2+n+1+n+ncov+q+K+K*n+q*n), code_error, sum_diff_tf, t-1) 
             else
                 old_diff = diff_llik
-                llik[t] = llik_compute(Y,n,p,q,K,Lambda_1, Lambda_2, Theta_delta, Psi_delta, Phi, kappa, Ez1, Ez0,Ek0,Ek1,mu,nu,Eeta,Exi,Eetay1,Exiy0,ESyy1,ESyy0,ESetaeta,ESxixi)
- 
+                llik[t] = llik_compute(Y,n,p,q,K,Lambda_1, Lambda_2, kappa,mu,nu,inv_lemma_1,inv_lemma_2,det_lemma_1,det_lemma_2)
+
                 diff_llik = abs(oldllik - llik[t])
                 if !(oldllik<llik[t])
                     code_error = 3.0
@@ -444,35 +449,43 @@ end
 
 
 # Log-likelihood computation
-
-function llik_compute(Y::Matrix{Float64},n::Int64,p::Int64,q::Int64,K::Int64,Lambda_1::Matrix{Float64}, Lambda_2::Matrix{Float64}, Theta_delta::Diagonal{Float64, Vector{Float64}}, Psi_delta::Diagonal{Float64, Vector{Float64}}, Phi::Matrix{Float64}, kappa::Vector{Float64}, Ez1::Vector{Float64}, Ez0::Vector{Float64},Ek0::Float64,Ek1::Float64,mu::Vector{Float64},nu::Vector{Float64},Eeta::Matrix{Float64},Exi::Matrix{Float64},Eetay1::Matrix{Float64},Exiy0::Matrix{Float64},ESyy1::Matrix{Float64},ESyy0::Matrix{Float64},ESetaeta::Matrix{Float64},ESxixi::Matrix{Float64},)
-    local llik::Float64, transpY::Adjoint{Float64, Matrix{Float64}}, tr1::Float64, tr2::Float64, sum1::Float64, tr3::Float64, sum2::Float64, tr4::Float64, tr5::Float64, tr6::Float64, sum3::Float64, tr7::Float64, sum4::Float64, tr8::Float64, B1_intra::Matrix{Float64}, B2_intra::Matrix{Float64}, b1_intra::Matrix{Float64}, b2_intra::Matrix{Float64}
-    transpY = Adjoint{Float64, Matrix{Float64}}(Y)
-    
-    tr1 = tr(Theta_delta\ESyy1)*n
-    tr2 = 2*tr(Lambda_1'*(Theta_delta\Eetay1))*n
-    tr3 = tr(Lambda_1'*(Theta_delta\Lambda_1)*ESetaeta)*n
-    tr4 = tr(Phi\ESetaeta)*n
-    tr5 = 2*tr(inv(Phi)*sum(Eeta,dims=2)*mu')
-    tr6 = tr((Phi)\(Ek1*mu*mu'))
-    
-    tr7 = tr(Psi_delta\ESyy0)*n
-    tr8 = 2*tr(Lambda_2'*(Psi_delta\Exiy0))*n
-    tr9 = tr(Lambda_2'*(Psi_delta\Lambda_2)*ESxixi)*n
-    tr10 = tr(ESxixi)*n
-    tr11 = 2*tr(sum(Exi,dims=2)*nu')
-    tr12 = tr((Ek0*nu*nu'))
-
-    lk1 = sum(Ez1.*log.(kappa))
-    lk0 = sum(Ez0.*log.(1 .-kappa))
-    lT = sum(Ez1)*(1/2)*log(det(Theta_delta))
-    lPh = sum(Ez1)*(1/2)*log(det(Phi))
-    lPs = sum(Ez0)*(1/2)*log(det(Psi_delta))
-
-    llik = (lk1-sum(Ez1)*(p/2)*log(2*pi)-lT-((1/2)*(tr1-tr2+tr3))-sum(Ez1)*(q/2)*log(2*pi)-lPh-(1/2)*(tr4-tr5+tr6))+
-    (lk0-sum(Ez0)*(p/2)*log(2*pi)-lPs-((1/2)*(tr7-tr8+tr9))-sum(Ez0)*(K/2)*log(2*pi)-(1/2)*(tr10-tr11+tr12))
+## Marginal
+function llik_compute(Y::Matrix{Float64},n::Int64,p::Int64,q::Int64,K::Int64,Lambda_1::Matrix{Float64}, Lambda_2::Matrix{Float64}, kappa::Vector{Float64}, mu::Vector{Float64},nu::Vector{Float64},inv_lemma_1,inv_lemma_2,det_lemma_1,det_lemma_2)
+    local llik::Float64
+    llik = sum(log.((kappa .* (exp.((.-1/2) .* diag((Y.-Lambda_1*mu)'*inv_lemma_1*(Y.-Lambda_1*mu)))./(sqrt((2 * pi)^(p) *det_lemma_1)))).+((1 .-kappa) .*((exp.((.-1/2) .* diag((Y.-Lambda_2*nu)'*inv_lemma_2*(Y.-Lambda_2*nu))))./(sqrt((2 * pi)^(p) *det_lemma_2))))))
     return llik
 end
+
+
+## Complete
+# function llik_compute(Y::Matrix{Float64},n::Int64,p::Int64,q::Int64,K::Int64,Lambda_1::Matrix{Float64}, Lambda_2::Matrix{Float64}, Theta_delta::Diagonal{Float64, Vector{Float64}}, Psi_delta::Diagonal{Float64, Vector{Float64}}, Phi::Matrix{Float64}, kappa::Vector{Float64}, Ez1::Vector{Float64}, Ez0::Vector{Float64},Ek0::Float64,Ek1::Float64,mu::Vector{Float64},nu::Vector{Float64},Eeta::Matrix{Float64},Exi::Matrix{Float64},Eetay1::Matrix{Float64},Exiy0::Matrix{Float64},ESyy1::Matrix{Float64},ESyy0::Matrix{Float64},ESetaeta::Matrix{Float64},ESxixi::Matrix{Float64},)
+#     local llik::Float64, transpY::Adjoint{Float64, Matrix{Float64}}, tr1::Float64, tr2::Float64, sum1::Float64, tr3::Float64, sum2::Float64, tr4::Float64, tr5::Float64, tr6::Float64, sum3::Float64, tr7::Float64, sum4::Float64, tr8::Float64, B1_intra::Matrix{Float64}, B2_intra::Matrix{Float64}, b1_intra::Matrix{Float64}, b2_intra::Matrix{Float64}
+#     transpY = Adjoint{Float64, Matrix{Float64}}(Y)
+    
+#     tr1 = tr(Theta_delta\ESyy1)*n
+#     tr2 = 2*tr(Lambda_1'*(Theta_delta\Eetay1))*n
+#     tr3 = tr(Lambda_1'*(Theta_delta\Lambda_1)*ESetaeta)*n
+#     tr4 = tr(Phi\ESetaeta)*n
+#     tr5 = 2*tr(inv(Phi)*sum(Eeta,dims=2)*mu')
+#     tr6 = tr((Phi)\(Ek1*mu*mu'))
+    
+#     tr7 = tr(Psi_delta\ESyy0)*n
+#     tr8 = 2*tr(Lambda_2'*(Psi_delta\Exiy0))*n
+#     tr9 = tr(Lambda_2'*(Psi_delta\Lambda_2)*ESxixi)*n
+#     tr10 = tr(ESxixi)*n
+#     tr11 = 2*tr(sum(Exi,dims=2)*nu')
+#     tr12 = tr((Ek0*nu*nu'))
+
+#     lk1 = sum(Ez1.*log.(kappa))
+#     lk0 = sum(Ez0.*log.(1 .-kappa))
+#     lT = sum(Ez1)*(1/2)*log(det(Theta_delta))
+#     lPh = sum(Ez1)*(1/2)*log(det(Phi))
+#     lPs = sum(Ez0)*(1/2)*log(det(Psi_delta))
+
+#     llik = (lk1-sum(Ez1)*(p/2)*log(2*pi)-lT-((1/2)*(tr1-tr2+tr3))-sum(Ez1)*(q/2)*log(2*pi)-lPh-(1/2)*(tr4-tr5+tr6))+
+#     (lk0-sum(Ez0)*(p/2)*log(2*pi)-lPs-((1/2)*(tr7-tr8+tr9))-sum(Ez0)*(K/2)*log(2*pi)-(1/2)*(tr10-tr11+tr12))
+#     return llik
+# end
 
 
 function classperf(z,Ez)
